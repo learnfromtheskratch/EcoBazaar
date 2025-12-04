@@ -17,7 +17,7 @@ public class UserService {
     @Autowired
     private UserRepo repo;
 
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(5);
     public Optional<userinfo> getUserByEmail(String email) {
         return Optional.ofNullable(repo.findByEmail(email).orElse(null));
     }
@@ -56,3 +56,4 @@ public class UserService {
         }
     }
 }
+
