@@ -55,10 +55,17 @@ public class Usercontroller {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            // Authenticate using email + password
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
+
+            // Authenticate using email + password with debug
+            try {
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                );
+                System.out.println("Authentication successful!");
+            } catch (Exception authEx) {
+                System.out.println("Authentication failed: " + authEx.getMessage());
+                throw authEx;
+            }
 
             // Fetch user from DB
             Optional<userinfo> userOptional = service.getUserByEmail(request.getEmail());
@@ -78,4 +85,6 @@ public class Usercontroller {
             return new ResponseEntity<>("Invalid email or password", HttpStatus.UNAUTHORIZED);
         }
     }
+
 }
+
