@@ -32,10 +32,14 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getServletPath();
-        if (path.equals("/login") || path.equals("/register") || request.getMethod().equals("OPTIONS")) {
+        if (path.equals("/login")
+                || path.equals("/register")
+                || request.getMethod().equals("OPTIONS")) {
+
             filterChain.doFilter(request, response);
-            return; // skip JWT validation for public endpoints
+            return;
         }
+
 
         String authHeader = request.getHeader("Authorization");
         String token = null;
@@ -73,3 +77,4 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
+
