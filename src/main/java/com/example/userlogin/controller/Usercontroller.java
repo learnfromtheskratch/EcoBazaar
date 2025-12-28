@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +27,7 @@ public class Usercontroller {
     private jwtService jwtService;
 
     @Autowired
-    private AuthenticationManager authenticationManager;
+    private DaoAuthenticationProvider authenticationProvider;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -34,11 +35,14 @@ public class Usercontroller {
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody userinfo user) {
         Optional<userinfo> existingUser = service.getUserByEmail(user.getEmail());
-
+        System.out.println(existingUser.isPresent());
         if (existingUser.isPresent()) {
-            // Update existing user
+            // Update existing user (only encode raw password)
             userinfo userToUpdate = existingUser.get();
-            userToUpdate.setPassword(passwordEncoder.encode(user.getPassword()));
+            if (!passwordEncoder.matches(user.getPassword(), userToUpdate.getPassword())) {
+                // Only re-encode if password changed
+                userToUpdate.setPassword(passwordEncoder.encode(user.getPassword()));
+            }
             userToUpdate.setRole(user.getRole());
             userToUpdate.setBusinessName(user.getBusinessName());
             userToUpdate.setStoreDescription(user.getStoreDescription());
@@ -46,45 +50,63 @@ public class Usercontroller {
             return ResponseEntity.ok("User updated successfully!");
         } else {
             // Save new user
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-            service.saveUser(user);
+            String pass=user.getPassword();
+            user.setPassword(passwordEncoder.encode("12345"));
+            service.saveUser(user); // Save first so the user exists in DB
+            // Call resetPassword directly to encode the password properly
+            LoginRequest req = new LoginRequest();
+            req.setEmail(user.getEmail());
+            req.setPassword(pass); // raw password from request
+            System.out.println(req.getEmail());
+            System.out.println(req.getPassword());
+            resetPassword(req);
+
             return ResponseEntity.ok("User registered successfully!");
         }
     }
 
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody LoginRequest request) {
+        // Fetch user by email
+        userinfo user = service.getUserByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Encode the raw password from request
+        String encoded = passwordEncoder.encode(request.getPassword());
+
+        // Update DB
+        user.setPassword(encoded);
+        service.saveUser(user);
+
+        return ResponseEntity.ok("Password reset successfully!");
+    }
+
+   
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+
         try {
+            authenticationProvider.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
 
-            // Authenticate using email + password with debug
-            try {
-                authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-                );
-                System.out.println("Authentication successful!");
-            } catch (Exception authEx) {
-                System.out.println("Authentication failed: " + authEx.getMessage());
-                throw authEx;
-            }
+            userinfo user = service.getUserByEmail(request.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Fetch user from DB
-            Optional<userinfo> userOptional = service.getUserByEmail(request.getEmail());
-            if (userOptional.isEmpty()) {
-                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
-            }
-
-            userinfo user = userOptional.get();
-
-            // Generate token using email + role
             String token = jwtService.generateToken(user.getEmail(), user.getRole());
 
-            // Return token + role
             return ResponseEntity.ok(new LoginResponse(token, user.getRole()));
 
         } catch (Exception e) {
+            e.printStackTrace();
             return new ResponseEntity<>("Invalid email or password", HttpStatus.UNAUTHORIZED);
         }
     }
 
+
 }
+
 
