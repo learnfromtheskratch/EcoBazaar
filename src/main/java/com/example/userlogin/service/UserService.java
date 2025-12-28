@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -17,7 +18,9 @@ public class UserService {
     @Autowired
     private UserRepo repo;
 
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(5);
+    @Autowired
+    private PasswordEncoder encoder;
+
     public Optional<userinfo> getUserByEmail(String email) {
         return Optional.ofNullable(repo.findByEmail(email).orElse(null));
     }
@@ -56,4 +59,5 @@ public class UserService {
         }
     }
 }
+
 
