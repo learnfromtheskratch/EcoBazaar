@@ -49,39 +49,13 @@ public class Usercontroller {
             service.saveUser(userToUpdate);
             return ResponseEntity.ok("User updated successfully!");
         } else {
-            // Save new user
-            String pass=user.getPassword();
-            user.setPassword(passwordEncoder.encode("12345"));
-            service.saveUser(user); // Save first so the user exists in DB
-            // Call resetPassword directly to encode the password properly
-            LoginRequest req = new LoginRequest();
-            req.setEmail(user.getEmail());
-            req.setPassword(pass); // raw password from request
-            System.out.println(req.getEmail());
-            System.out.println(req.getPassword());
-            resetPassword(req);
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            service.saveUser(user);
 
             return ResponseEntity.ok("User registered successfully!");
         }
     }
 
-    @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestBody LoginRequest request) {
-        // Fetch user by email
-        userinfo user = service.getUserByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Encode the raw password from request
-        String encoded = passwordEncoder.encode(request.getPassword());
-
-        // Update DB
-        user.setPassword(encoded);
-        service.saveUser(user);
-
-        return ResponseEntity.ok("Password reset successfully!");
-    }
-
-   
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
@@ -108,5 +82,6 @@ public class Usercontroller {
 
 
 }
+
 
 
