@@ -45,9 +45,6 @@ public class UserService {
                             HttpStatus.BAD_REQUEST);
                 }
             }
-            // Encrypt password
-            user.setPassword(encoder.encode(user.getPassword()));
-
             // Save user
             repo.save(user);
 
@@ -59,5 +56,6 @@ public class UserService {
         }
     }
 }
+
 
 
